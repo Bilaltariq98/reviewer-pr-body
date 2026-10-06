@@ -7,7 +7,7 @@ description: Use whenever a pull request is opened, created, raised or updated �
 
 A reviewer has three questions: *what should this do*, *what could go wrong*, *how do I know it works*. The diff answers none of them. The body does, or the reviewer reconstructs it from the ticket, Slack and the code — slowly, and differently from you.
 
-Walk the steps in order, every time. Do not start writing until Step 3 is done: a body written before the context is gathered describes the code, not the behaviour.
+Walk the steps in order, every time. Do not start writing until Step 4 is done: a body written before the context is gathered describes the code, not the behaviour.
 
 ## Step 1 — Find the project tracker
 
@@ -47,7 +47,7 @@ Collect all of these before writing. Missing one → say so in the body, never p
 
 ## Step 3 — Classify the risk surface
 
-Answer each with yes/no. Every "yes" becomes a mandatory section in Step 4.
+Answer each with yes/no. Every "yes" becomes a section or Notes bullet in Step 5.
 
 - Does it accept a weaker guarantee than someone would assume? (auth, trust boundary, validation it cannot do)
 - Does it fail to fix existing bad data/history?
@@ -55,9 +55,35 @@ Answer each with yes/no. Every "yes" becomes a mandatory section in Step 4.
 - Does the diff include anything outside the ticket's scope?
 - Is any verification still pending?
 
-## Step 4 — Write the body
+## Step 4 — Pick the size
 
-Use the template's headings in order. Insert the extra sections at the marked positions.
+Size follows what the reviewer needs to decide, never the diff's line count. A 20-line auth change needs more words than a 2,000-line rename. Walk this every time:
+
+```
+Any Step 3 "yes" on trust/guarantee or unrepaired data?
+├── Yes → FULL
+└── No
+    ├── More than one user-facing path changes, or a bug whose cause is non-obvious?
+    │   └── Yes → FULL
+    ├── Behaviour changes along one path?
+    │   └── Yes → STANDARD
+    └── No behaviour change (refactor, deps, copy, config, tests)
+        └── SHORT
+```
+
+| Size | Prose budget (excl. diagrams, tables, code) | Includes |
+| --- | --- | --- |
+| SHORT | ≤ 80 words | Template headings, one line each. No diagrams. "None" for empty sections. |
+| STANDARD | ≤ 250 words | TL;DR, ticket, one flowchart if the flow changed, Start here, changes, verify table. Step 3 "yes" answers become Notes bullets. |
+| FULL | ≤ 120 words per section | Every section in Step 5 that applies. Deep material goes in `<details>`. |
+
+Why: reviewers skip long bodies and write their own summary instead, so a padded body costs the reviewer's time and gets ignored. Diagrams and tables are exempt because they're what reviewers read first.
+
+When over budget, cut prose before diagrams and move depth into `<details>`. Never cut a reviewer decision or a pending-verification note.
+
+## Step 5 — Write the body
+
+Use the template's headings in order. Insert the extra sections at the marked positions. Skip any section the chosen size excludes.
 
 **TL;DR** — 1–2 sentences of user-visible behaviour, including what deliberately does *not* change. Never name files or functions here: the reviewer has not earned that context yet.
 
@@ -75,13 +101,15 @@ Use the template's headings in order. Insert the extra sections at the marked po
 
 **What this cannot repair** *(required when existing data is affected)* — what happens to history/old records, and the manual action needed to fix them.
 
+**Start here** *(STANDARD and FULL; after the diagrams)* — one line: the file or function to open first, and the order to read the rest in. Why: reviewers say the hardest part of a process change is knowing where to start reading.
+
 **Codebase changes** — 3–6 bullets, one per *intent*, not per file. Each bullet: the change + the reason in the same line.
 
 **Steps to verify**
 - A `Scenario | Expected result` table. Rows mirror the explainer diagrams' branches, including the negative paths (blocked, rejected, quarantined). Why: the reviewer can tick the diagram off row by row.
 - Then automated verification: suite name + pass count, plus lint/type/clippy checks. Never write "tests pass" without a number.
 
-**Follow-up sections** — every review round or out-of-scope fix gets its own `##` section appended below Steps to verify: what triggered it, what changed, how it was validated. Never fold them silently into Codebase changes: a re-reviewer needs to see only what is new.
+**Follow-up sections** — every review round or out-of-scope fix gets its own `<details><summary>Review round N: what changed</summary>` block appended below Steps to verify: what triggered it, what changed, how it was validated. Never fold them silently into Codebase changes: a re-reviewer needs to see only what is new. Collapse them so the top of the body stays short for a first-time reader.
 
 **Notes to Reviewer** — bullets, one per Step 3 "yes": deploy order, infra/config steps, unrepaired data, pending verification. If verification is pending, say the PR stays in draft until it is done.
 
@@ -95,8 +123,20 @@ Use the template's headings in order. Insert the extra sections at the marked po
 - Diagrams describe behaviour; prose names code. Never put identifiers in diagram nodes.
 - Update the body after every push that changes behaviour or scope. A stale body is worse than a short one: the reviewer trusts it.
 
+## Prose that doesn't read as AI
+
+Reviewers skim past text that sounds generated, and then they miss the one line that mattered. Write like the author's own commit messages.
+
+- Delete any sentence that would be true of any PR ("This PR improves…", "ensures consistency", "In summary").
+- Never use: comprehensive, robust, seamless, leverage, streamline, enhance, crucial, delve, ensure, "it's worth noting".
+- Never explain what the diff already shows. Explain why, and what the diff can't show.
+- One idea per sentence. Bold at most one phrase per section, and only for something a reviewer must not miss.
+- No emoji, no "Overview"/"Summary" headings the template didn't ask for, no closing recap.
+- Cut test: delete each sentence in turn. If the reviewer loses nothing, leave it deleted.
+
 ## Before publishing
 
+- [ ] Size picked from the Step 4 tree; prose within its budget (count it)
 - [ ] TL;DR readable by someone who has not opened the ticket
 - [ ] Each diagram branch has a matching verification row
 - [ ] Each Step 3 "yes" has its section or Notes bullet
