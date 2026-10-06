@@ -1,0 +1,11 @@
+{
+  "$schema": "https://skills.sh/schemas/skills.sh.schema.json",
+  "notGrouped": "bottom",
+  "groupings": [
+    {
+      "title": "Agent workflows",
+      "description": "Skills for writing pull request descriptions reviewers can act on.",
+      "skills": ["reviewer-pr-body"]
+    }
+  ]
+}
